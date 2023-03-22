@@ -8,7 +8,7 @@ class ComputeSimilarity():
         self.data_val = list()
         self.data_key = list()
         self.similarity_scores = list()
-        self.top_indexes = [0, 1, 2]
+        self.top_indexes = [0, 1, 2, 3]
         
         for key in self.data.keys():
             for val in self.data[key]:
@@ -16,12 +16,15 @@ class ComputeSimilarity():
                 self.data_key.append(key)
     
     def find_top3_similar(self, input_imgs):
+        self.top_indexes = [0, 1, 2, 3]
         tensors = [self.compute(x, self.data_val, metric='cosine') for x in input_imgs]
         concat_scores = torch.cat(tensors, dim=0)
         mean_scores = torch.mean(concat_scores, dim=0)
         top_values = sorted(mean_scores[:3], reverse=True)
+        #print(top_values)
+        #print(top_values[0], top_values[-1])
         
-        for i in range(3, len(mean_scores)):
+        for i in range(0, len(mean_scores)):
             if mean_scores[i] > top_values[-1]:
                 top_values[-1] = mean_scores[i]
                 self.top_indexes[-1] = i
@@ -31,7 +34,7 @@ class ComputeSimilarity():
                         self.top_indexes[j], self.top_indexes[j-1] = self.top_indexes[j-1], self.top_indexes[j]
                     else:
                         break
-
+        #print(self.top_indexes)
         return [self.data_val[i] for i in self.top_indexes]
             
     def compute(self, input_feature, features, metric='cosine'):
