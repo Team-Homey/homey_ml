@@ -1,4 +1,86 @@
-test = {'business_status': 'OPERATIONAL', 'geometry': {'location': {'lat': 37.5181236, 'lng': 126.8999252}, 'viewport': {'northeast': {'lat': 37.51947342989273, 'lng': 126.9012750298927}, 'southwest': {'lat': 37.51677377010728, 'lng': 126.8985753701073}}}, 'icon': 'https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/generic_business-71.png', 'icon_background_color': '#7B9EB0', 'icon_mask_base_uri': 'https://maps.gstatic.com/mapfiles/place_api/icons/v2/generic_pinlet', 'name': 'Sealala Water Park', 'opening_hours': {'open_now': False}, 'photos': [{'height': 3456, 'html_attributions': ['<a href="https://maps.google.com/maps/contrib/109261297985848728079">sibum Kim</a>'], 'photo_reference': 'AfLeUgN3wq3KTZWjdfmwDlxJOa7mMIDYHvOaK7Y3iz_6ATpwZnvTKbNXxtSgjM9ov4-ZLrXOeAFUDWCnySpNeRaP54TlxW0QqmKJ2UWnNSbgAEW9N9VfjaVBRJKobdlU-5pseoYj3kP6cnmLYta20PFRW_3hadkCJDOvCpYicE4nioWBC7KX', 'width': 4608}], 'place_id': 'ChIJMfwYnPCefDUR-ZwyNc2pZZc', 'plus_code': {'compound_code': 'GV9X+6X Seoul', 'global_code': '8Q98GV9X+6X'}, 'rating': 3.9, 'reference': 'ChIJMfwYnPCefDUR-ZwyNc2pZZc', 'scope': 'GOOGLE', 'types': ['tourist_attraction', 'amusement_park', 'point_of_interest', 'establishment'], 'user_ratings_total': 1164, 'vicinity': '164 Mullae-ro, Yeongdeungpo-gu'}
+@app.route('/', methods=['GET'])
+def predict():
+    input_imgs = []
+    top3_tensors = []
+    top3_classes = []
+    results = []
 
-for i, key in enumerate(test.keys()) :
-    print(i, key, test[key])
+    # 주소와 이미지 URL을 GET 요청에서 가져옵니다
+    address = request.args.get('address')
+    image_urls = request.args.getlist('images')
+
+    # 이미지 URL을 이용하여 이미지를 로드하고 변환합니다
+    for url in image_urls:
+        img_bytes = requests.get(url).content
+        img = transform_image(img_bytes)
+        input_imgs.append(feature_model.forward(img))
+
+    top3_tensors = recommender.find_top3_similar(input_imgs)
+    for output in top3_tensors:
+        classes, probs = output_model.prediction(output)
+        top3_classes.append(classes)
+    top3_classes = list(set(top3_classes))
+
+    location = gmaps.geocode(address)[0]['geometry']['location']
+    cut = max(0, 4 - len(top3_classes)) if len(top3_classes) < 3 else 1
+
+    for idx, place in enumerate(top3_classes):
+        places = gmaps.places_nearby(keyword=place,
+                                     location=location,
+                                     radius=50000,
+                                     rank_by='prominence')
+
+        for place in places['results'][:cut]:
+            search_url = 'https://www.google.com/maps/search/?api=1&query=Google&query_place_id=' + place['place_id']
+            photo_url = 'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={}&key={}'.format(place['photos'][0]['photo_reference'], api_key)
+            place_info = PlaceInfo(title=place['name'],
+                                   address=place['vicinity'],
+                                   picture=photo_url,
+                                   url=search_url)
+            results.append(place_info)
+    return jsonify([vars(place) for place in results])
+
+
+import io
+import requests
+import googlemaps
+from flask import Flask, request, jsonify
+from function.feature_extraction import FeatureExtractor
+from function.preprocessing import transform_image
+from function.similarity import ComputeSimilarity
+
+app = Flask(__name__)
+
+FEATURE_MODEL = FeatureExtractor()
+OUTPUT_MODEL = FeatureExtractor()
+RECOMMENDER = ComputeSimilarity()
+API_KEY = 'YOUR_API_KEY'
+GMAPS = googlemaps.Client(API_KEY)
+
+USER_ADDRESS = '용산구 한강로동'
+IMAGE_URLS = [
+    "https://storage.googleapis.com/homey-test-storage/0f6c85f6-84cc-41de-a3dc-c691a4a54a9d"
+]
+
+class PlaceInfo():
+    def __init__(self, name: str, address: str, photo_url: str, search_url: str):
+        self.name = name
+        self.address = address
+        self.photo_url = photo_url
+        self.search_url = search_url
+
+@app.route('/')
+def predict():
+    input_images = []
+    top3_tensors = []
+    top3_classes = []
+    results = []
+        
+    for image_url in IMAGE_URLS:
+        image_bytes = requests.get(image_url).content
+        image = transform_image(image_bytes)
+        input_images.append(FEATURE_MODEL.forward(image))
+    
+    top3_tensors = RECOMMENDER.find_top3_similar(input_images)
+    for tensor in top3_tensors:
+        classes, probabilities = OUTPUT_MODEL.prediction(tensor

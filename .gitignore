@@ -1,2 +1,3 @@
 place_recommender/models/resnet50_places365.pth.tar
 place_recommender/models/resnet50_places365.t7
+place_recommender/test.py
