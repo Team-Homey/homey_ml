@@ -12,8 +12,4 @@ def transform_image(img_bytes) :
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
     img = Image.open(io.BytesIO(img_bytes)).convert('RGB')
-    print(img.size)
-    print(type(transform_img(img)))
     return transform_img(img).unsqueeze(0)
-
-#print(type(transform_image('../data/17.jpg')))

@@ -21,8 +21,6 @@ class ComputeSimilarity():
         concat_scores = torch.cat(tensors, dim=0)
         mean_scores = torch.mean(concat_scores, dim=0)
         top_values = sorted(mean_scores[:3], reverse=True)
-        #print(top_values)
-        #print(top_values[0], top_values[-1])
         
         for i in range(0, len(mean_scores)):
             if mean_scores[i] > top_values[-1]:
@@ -34,7 +32,6 @@ class ComputeSimilarity():
                         self.top_indexes[j], self.top_indexes[j-1] = self.top_indexes[j-1], self.top_indexes[j]
                     else:
                         break
-        #print(self.top_indexes)
         return [self.data_val[i] for i in self.top_indexes]
             
     def compute(self, input_feature, features, metric='cosine'):
@@ -42,15 +39,9 @@ class ComputeSimilarity():
             input_feature = input_feature.cpu().numpy()
             features = torch.cat(features, dim=0).cpu().numpy()
             similarity_scores = np.dot(input_feature, features.T)
-            # most_similar_index = np.argmax(similarity_scores)
-            # most_similar_feature = features[most_similar_index]
-        
         elif metric == 'euclidean':
             input_feature = input_feature.cpu().numpy()
             features = torch.cat(features, dim=0).cpu().numpy()
             similarity_scores = np.sum((features - input_feature) ** 2, axis=1)
-            # most_similar_index = np.argmin(similarity_scores)
-            # most_similar_feature = features[most_similar_index]
-        
         return torch.Tensor(similarity_scores)
     
