@@ -1,5 +1,5 @@
 import requests
-
+import app
 print("아아")
 
 localUrl = "http://127.0.0.1:8080/ping"
@@ -18,7 +18,7 @@ print(response.text)
 
 response = requests.get("http://34.22.71.66/family/ids")
 print(response.json()["familyIds"])
-familyIdList = response.json()["familyIds"];
+familyIdList = response.json()["familyIds"]
 
 
 for x in familyIdList :
@@ -28,12 +28,14 @@ for x in familyIdList :
     print(photoResponse.json())
 
     # Todo : 모델 돌려서 추천 정보 json formatting
-    resultJson = {
-	    "title" : "test title",
-	    "address" : "test address",
-	    "picture" : "https://1234514",
-	    "url" : "https://rdgd"
-    }
+    resultJson = app.predict(photoResponse.json()["images"])
+
+    # resultJson = {
+	#     "title" : "test title",
+	#     "address" : "test address",
+	#     "picture" : "https://1234514",
+	#     "url" : "https://rdgd"
+    # }
 
     recommendedContentPostResponse = requests.post("http://34.22.71.66/recommended-content/family-id/" + str(x), json=resultJson)
     print(recommendedContentPostResponse.status_code)   
